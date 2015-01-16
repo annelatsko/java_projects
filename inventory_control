@@ -1,0 +1,242 @@
+/* Annie Latsko
+ * Programming Project 1
+ * This program reads in an inventory text file and then, based on the contents of that file, creates a menu that allows the user to 
+ * buy, sell, and change the price of the items given. User can also add items, along with their respective quantities and prices. A
+ * current balance is updated as users work their way through the program. Before the program exits, all of the information is saved
+ * to the original inventory file, updating it.
+ * 
+ * If the user enters any sort of string or character into this program when a number is CLEARLY expected, it will crash.
+ */
+package programmingproject1;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+public class Project1 {
+	public static void main(String[] args) throws FileNotFoundException {
+		String filename;
+		String decision; //yes or no
+		String lowerDecision;
+		String lowerNewItem;
+		int i; //choice 1 (from main menu)
+		int m; //for loop variable
+		int q; //for loop variable
+		int choice; //choice (from sub menu)
+		int toSell;
+		int toBuy;
+		int newQuantity;
+		String currentObject;
+		String newItem;
+		int currentQuantity;
+		double currentBalance;
+		double priceToBuy;
+		double currentPrice;
+		double newPrice;
+		double newItemPrice;
+		
+		
+		Scanner kb = new Scanner(System.in);
+		System.out.print("Please enter an inventory file: ");
+		filename = kb.nextLine();
+		File inputFile = new File(filename);
+		while (!inputFile.exists()) {
+			System.out.println("The file does not exist. System exiting.");
+			System.exit(0);
+		}	
+		Scanner file = new Scanner(inputFile);
+		ArrayList<Double> balance = new ArrayList<Double>(); // these arrays are going to hold all of the items in the file
+		ArrayList<String> objects = new ArrayList<String>();
+		ArrayList<Double> prices = new ArrayList<Double>();
+		ArrayList<Integer> quantities = new ArrayList<Integer>();
+		balance.add(file.nextDouble());
+		while(file.hasNext()){ //this puts everything into its respective arrays
+			objects.add(file.next());
+			prices.add(file.nextDouble());
+			quantities.add(file.nextInt());
+		}
+		file.close();
+		//This next block sets up the main menu
+		i = 1;
+		while(i != 0){
+			System.out.println("Current Balance: " + balance.get(0));
+			for (m = 0; m < objects.size(); m++){//sets up all of the options
+				System.out.println((m+1) + ". " + objects.get(m) + "\t" + "(" + quantities.get(m) + " at " + prices.get(m) + ")");
+			}
+			System.out.println((objects.size() + 1) + ". Add item"); //this is the add new item option
+			System.out.println("0. Exit"); //exit option
+			System.out.print("Please enter choice: ");
+			i = kb.nextInt();
+			while (i > (objects.size() + 1)){ //checks
+				System.out.println("Please ACTUALLY select an option FROM the list.");
+				System.out.print("Please enter choice: ");
+				i = kb.nextInt();
+			}
+			
+			while (i == (objects.size()+1)){ // this is the logic for the "add new item" option
+				System.out.println("Enter name of new item: ");
+				newItem = kb.next();
+				lowerNewItem = newItem.toLowerCase();
+				while (objects.contains(lowerNewItem.substring(0, 1).toUpperCase() + lowerNewItem.substring(1))){ //checks to see if newItem already in the objects arraylist
+					System.out.println("This item already exists! Please enter name of NEW item: ");
+					newItem = kb.next();
+					lowerNewItem = newItem.toLowerCase();
+				}
+				objects.add(lowerNewItem.substring(0, 1).toUpperCase() + lowerNewItem.substring(1));
+				while(i != 0){	
+					System.out.println("Enter starting quantity: "); //sets up quantity and price per unit
+					newQuantity = kb.nextInt();
+					System.out.println("Enter price per unit: ");
+					newItemPrice = kb.nextDouble();
+					currentBalance = balance.get(0);
+					if(newQuantity >= 0 && newItemPrice >= 0){ //checks to make sure all values are nonnegative
+						if (currentBalance <= (newItemPrice * newQuantity)){
+							System.out.println("This will drop your balance beneath zero. Do you wish to continue? (yes or anything else)"); //checks to see if starting quantity and price per unit will drop current balance below zero
+							decision = kb.next();
+							lowerDecision = decision.toLowerCase();
+							if (lowerDecision.compareTo("yes") == 0){//checks to make sure it's cool that currentBalance goes below zero
+								currentBalance = currentBalance - (newItemPrice * newQuantity);
+								balance.set(0, currentBalance); //adds all of this stuff to the respective arrays
+								prices.add(newItemPrice);
+								quantities.add(newQuantity);
+								i = 0;
+							}
+							else{
+								System.out.println("Please try again."); //if the user inputs anything besides yes, program loops
+							}
+						}	
+						else{ //if the balance won't drop below zero based on starting quantity and price
+							currentBalance = currentBalance - (newItemPrice * newQuantity);
+							balance.set(0, currentBalance); //adds everything to the arrays
+							prices.add(newItemPrice); 
+							quantities.add(newQuantity);
+							i = 0;
+						}
+					}
+					else{
+						System.out.println("Negative numbers don't make any sense. Put in something that makes sense (hint: not letters either): ");
+					}
+				}
+				
+				System.out.println("Current Balance: " + balance.get(0));
+				for (m = 0; m < objects.size(); m++){//sets up all of the options
+					System.out.println((m+1) + ". " + objects.get(m) + "\t" + "(" + quantities.get(m) + " at " + prices.get(m) + ")");
+				}
+				System.out.println((objects.size() + 1) + ". Add item"); //this is the add new item option
+				System.out.println("0. Exit"); //exit option
+				System.out.print("Please enter choice: ");
+				i = kb.nextInt();
+			}
+			while (i == 0){ //this is the exit option, combined with the whole "write to a file" thing
+				System.out.print("System writing information to file and exiting.");
+				PrintWriter outputFile = new PrintWriter(filename);
+				outputFile.println(balance.get(0));
+				for (q = 0; q < objects.size(); q++){
+					outputFile.println(objects.get(q) + "\t" + prices.get(q) + "\t" + quantities.get(q)); //tabs improve readability in the text file
+				}	
+				outputFile.close();
+				System.exit(0);
+			}
+			currentObject = objects.get(i-1); //this sets all of the preliminary factors for whatever choice the user makes
+			currentQuantity = quantities.get(i - 1);
+			currentBalance = balance.get(0);
+			currentPrice = prices.get(i - 1);
+			
+			choice = 1;
+			while(choice != 0){// this sets up the sub-menu
+				System.out.println("Current Balance: " + currentBalance);
+				System.out.println("Current Quantity: " + currentQuantity);
+				System.out.printf("Current Price: $%.2f\n" , currentPrice);
+				System.out.println("1. Sell " + currentObject);
+				System.out.println("2. Buy " + currentObject);
+				System.out.println("3. Change price");
+				System.out.println("0. Exit to main menu");
+				System.out.print("Please enter choice: ");
+				choice = kb.nextInt();
+				while (choice > 3){
+					System.out.println("Please choose something ACTUALLY on this menu.");
+					System.out.println("Please enter choice: ");
+					choice = kb.nextInt();
+					
+					
+				}
+				while (choice == 1){ //sell object
+					System.out.println("Amount you wish to sell (current quantity is " + quantities.get(i - 1) + "): ");
+					toSell = kb.nextInt();
+					if(toSell >= 0){
+						if (currentQuantity <= toSell){
+							System.out.println("Warning: you are trying to sell more than you actually have. Do you want to continue? (yes/no) ");
+							decision = kb.next();
+							lowerDecision = decision.toLowerCase();
+							if (lowerDecision.compareTo("yes") == 0){ //checks if user actually wanted to sell that much
+								currentBalance = currentBalance + (toSell * currentPrice);
+								currentQuantity = currentQuantity - toSell;
+								balance.set(0, currentBalance);
+								quantities.set(i - 1, currentQuantity);
+								choice = -1;
+							}
+							else{
+								System.out.println("Please try again.");
+							}
+						}
+						else{
+							currentBalance = currentBalance + (toSell * currentPrice);
+							currentQuantity = currentQuantity - toSell;
+							balance.set(0, currentBalance);
+							quantities.set(i - 1, currentQuantity);
+							choice = -1;
+						}
+					}
+					else{
+						System.out.println("If you want this program to work, you have to enter input that makes sense (PRO TIP: NOT NEGATIVE AMOUNTS OR PRICES). Try again.");
+					}
+				}
+				while (choice == 2){ //buy
+						System.out.println("Amount to buy: ");
+						toBuy = kb.nextInt();
+						System.out.println("Price per item: ");
+						priceToBuy = kb.nextDouble();
+						if(priceToBuy >= 0 && toBuy >= 0){		
+							if (currentBalance - (toBuy * priceToBuy) < 0){
+									System.out.println("Warning: your balance is less than zero. Do you want to continue (yes/no)? ");
+									decision = kb.next();
+									lowerDecision = decision.toLowerCase();
+									if (lowerDecision.compareTo("yes") == 0){
+										currentBalance = currentBalance - (toBuy * priceToBuy);
+										currentQuantity = currentQuantity + toBuy;
+										balance.set(0, currentBalance);
+										quantities.set(i - 1, currentQuantity);
+										choice = -1;
+									}
+									else{
+										System.out.println("Please try again.");
+									}
+							}		
+								else{
+									currentBalance = currentBalance - (toBuy * priceToBuy);
+									currentQuantity = currentQuantity + toBuy;
+									balance.set(0, currentBalance);
+									quantities.set(i - 1, currentQuantity);
+									choice = -1;
+								}	
+						}
+						else{
+							System.out.println("Why are you entering negative amounts? You suck. Try again.");
+						}
+					}
+				while (choice == 3){ //change price
+					System.out.println("New price: ");
+					newPrice = kb.nextDouble();
+					if (newPrice >= 0){	
+						currentPrice = newPrice;
+						prices.set(i - 1, currentPrice);
+						choice = -1;
+					}
+					else{
+						System.out.println("Negative prices don't make any sense. Try again.");
+					}
+				}
+			}
+		}
+	}
+}
